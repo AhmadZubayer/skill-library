@@ -1,0 +1,23 @@
+// Example payable for the payment module. Rename to what the project sells (order, enrollment, ...).
+model Booking {
+  id             String        @id @default(uuid())
+  status         BookingStatus @default(REQUESTED)
+  startAt        DateTime
+  endAt          DateTime
+  priceAtBooking Decimal       @db.Decimal(10, 2)
+
+  customerId String
+  customer   User   @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payments Payment[]
+
+  @@index([customerId])
+  @@index([serviceId])
+  @@map("bookings")
+}

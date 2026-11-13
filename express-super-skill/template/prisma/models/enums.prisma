@@ -1,0 +1,45 @@
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  DELETED
+}
+
+// @feature google
+enum AuthProvider {
+  GOOGLE
+  CREDENTIAL
+}
+// @end
+
+// @feature stripe|bkash
+enum PaymentProvider {
+  STRIPE
+  BKASH
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUND_PENDING
+  REFUND_FAILED
+  REFUNDED
+}
+
+// Example payable status. Rename to the project's own (ACCEPTED = ready to pay, PAID = paid).
+enum BookingStatus {
+  REQUESTED
+  ACCEPTED
+  DECLINED
+  PAID
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+// @end

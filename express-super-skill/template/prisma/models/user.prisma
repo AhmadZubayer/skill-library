@@ -1,0 +1,26 @@
+model User {
+  id                 String       @id @default(uuid())
+  name               String
+  email              String       @unique
+  password           String?
+  // @feature google
+  googleId           String?      @unique
+  authProvider       AuthProvider @default(CREDENTIAL)
+  // @end
+  emailVerified      Boolean      @default(false)
+  role               UserRole     @default(USER)
+  status             UserStatus   @default(ACTIVE)
+  needPasswordChange Boolean      @default(false)
+  imageUrl           String       @default("")
+  imagePublicId      String       @default("")
+  isDeleted          Boolean      @default(false)
+  deletedAt          DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  // @feature stripe|bkash
+  customerBookings Booking[]
+  // @end
+
+  @@map("users")
+}
