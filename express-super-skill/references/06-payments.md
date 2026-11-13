@@ -6,20 +6,20 @@ The payment module is scaffolded complete in `src/app/module/payment/`. This fil
 
 Stripe and bKash do the same job in different ways. The module hides that difference behind one interface, so the rest of the app never knows which gateway is in use.
 
-| Pattern | Role | File |
-|---|---|---|
-| **Strategy** | one contract every gateway follows | `IPaymentProvider` in `payment.interface.ts` |
-| **Adapter** | one file per gateway that translates the contract into that gateway's API | `providers/stripe/stripe.provider.ts`, `providers/bkash/bkash.provider.ts` |
-| **Factory** | picks the adapter at runtime | `providers/paymentProvider.factory.ts` |
+| Pattern            | Role                                                                      | File                                                                           |
+| ------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Strategy** | one contract every gateway follows                                        | `IPaymentProvider` in `payment.interface.ts`                               |
+| **Adapter**  | one file per gateway that translates the contract into that gateway's API | `providers/stripe/stripe.provider.ts`, `providers/bkash/bkash.provider.ts` |
+| **Factory**  | picks the adapter at runtime                                              | `providers/paymentProvider.factory.ts`                                       |
 
-| Step | Stripe | bKash |
-|---|---|---|
-| Authentication | secret key on the SDK client | `id_token` from `/token/grant`, cached in Redis for 1 hour, renewed with a refresh token (28 days) |
-| Start a payment | `checkout.sessions.create` → `session.url` | `POST /checkout/create` → `bkashURL` |
-| ID stored as `providerTransactionId` | `session.id` | `paymentID` |
-| Amount format | integer in the smallest unit (poisha) | decimal string, `"100.50"` |
-| Confirmation | Stripe sends a **signed webhook (POST)**; verified with the raw body | the **browser is redirected (GET)** to a callback with `?paymentID&status`; the server then calls `/execute` |
-| Refund | `refunds.create`; final status arrives by webhook | `POST /payment/refund`; needs the `trxID`, which the adapter looks up itself |
+| Step                                   | Stripe                                                                     | bKash                                                                                                                  |
+| -------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Authentication                         | secret key on the SDK client                                               | `id_token` from `/token/grant`, cached in Redis for 1 hour, renewed with a refresh token (28 days)                 |
+| Start a payment                        | `checkout.sessions.create` → `session.url`                            | `POST /checkout/create` → `bkashURL`                                                                              |
+| ID stored as `providerTransactionId` | `session.id`                                                             | `paymentID`                                                                                                          |
+| Amount format                          | integer in the smallest unit (poisha)                                      | decimal string, `"100.50"`                                                                                           |
+| Confirmation                           | Stripe sends a **signed webhook (POST)**; verified with the raw body | the **browser is redirected (GET)** to a callback with `?paymentID&status`; the server then calls `/execute` |
+| Refund                                 | `refunds.create`; final status arrives by webhook                        | `POST /payment/refund`; needs the `trxID`, which the adapter looks up itself                                       |
 
 Confirmation is **not** in the shared interface, because the gateways notify in completely different ways. Each gateway has its own incoming route, which verifies the notification with the gateway, translates it into the same payload, and calls the same service functions:
 
@@ -58,6 +58,7 @@ Plus `lib/stripe.ts`, `lib/bkash.ts`, `prisma/models/payment.prisma`, and the ex
 The scaffold pays for an example **`Booking`** of an example **`Service`** (`prisma/models/booking.prisma`, `service.prisma`). Replace them with what the project actually sells.
 
 1. Create the project's own payable model (order, enrollment, subscription) with:
+
    - a status enum that has a "ready to be paid" value and a "paid" value;
    - a price column copied at purchase time (`Decimal @db.Decimal(10, 2)`);
    - the buyer relation to `User`;
@@ -65,16 +66,15 @@ The scaffold pays for an example **`Booking`** of an example **`Service`** (`pri
 2. In `payment.prisma`, point `bookingId` / `booking` at the new model.
 3. Across `module/payment/` rename `booking` / `Booking` / `bookingId` to the new name, and map:
 
-   | Example | Meaning | Replace with |
-   |---|---|---|
-   | `BookingStatus.ACCEPTED` | ready to be paid | the project's status |
-   | `BookingStatus.PAID` | paid | the project's status |
-   | `BookingStatus.CANCELLED` | cancelled (triggers a refund if money arrived) | the project's status |
-   | `BookingStatus.IN_PROGRESS`, `COMPLETED` | later stages that still count as paid | the project's later statuses, or remove |
-   | `booking.priceAtBooking` | amount to charge | the price column |
-   | `booking.customer.email` / `customerId` | the buyer | the buyer relation |
-   | `booking.service.title` | item name shown at checkout | the item's name |
-
+   | Example                                      | Meaning                                        | Replace with                            |
+   | -------------------------------------------- | ---------------------------------------------- | --------------------------------------- |
+   | `BookingStatus.ACCEPTED`                   | ready to be paid                               | the project's status                    |
+   | `BookingStatus.PAID`                       | paid                                           | the project's status                    |
+   | `BookingStatus.CANCELLED`                  | cancelled (triggers a refund if money arrived) | the project's status                    |
+   | `BookingStatus.IN_PROGRESS`, `COMPLETED` | later stages that still count as paid          | the project's later statuses, or remove |
+   | `booking.priceAtBooking`                   | amount to charge                               | the price column                        |
+   | `booking.customer.email` / `customerId`  | the buyer                                      | the buyer relation                      |
+   | `booking.service.title`                    | item name shown at checkout                    | the item's name                         |
 4. Delete `booking.prisma`, `service.prisma`, the `BookingStatus` enum and `customerBookings` on `User` once nothing uses them. Migrate, generate, then run `npx tsc --noEmit` and fix anything that still mentions the old names.
 
 The amounts are in BDT; both adapters reject other currencies. For another currency change the currency checks in the adapters and in `completePaymentIntoDB`, and Stripe's `currency` value.
@@ -129,7 +129,18 @@ Use the same three pieces (interface, adapters, factory) for any other service w
 
 **bKash (sandbox)**
 
-1. `.env.example` already holds bKash's published sandbox credentials; copy them to `.env`.
+**BKASH SANDBOX CREDENTIALS:**
+
+```shell
+BKASH_BASE_URL=https://tokenized.sandbox.bka.sh/v1.2.0-beta
+BKASH_USERNAME=sandboxTokenizedUser02
+BKASH_PASSWORD=sandboxTokenizedUser02@12345
+BKASH_APP_KEY=4f6o0cjiki2rfm34kfdadl1eqq
+BKASH_APP_SECRET=2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3fug4b
+BKASH_CALLBACK_URL=http://localhost:5000/api/v1
+```
+
+1. use the above credentials for bkash and put them in the .env file.
 2. Create a payment with `"provider": "BKASH"` and open `checkoutUrl`.
 3. Pay with a bKash sandbox test wallet. The commonly published one is number `01770618575`, OTP `123456`, PIN `12121`; if it is rejected, take the current test wallet from the bKash developer portal.
 4. bKash redirects to `/api/payments/bkash/callback`; the server executes the payment and redirects to the frontend's `/payment/success`.
